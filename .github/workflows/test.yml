@@ -1,18 +1,52 @@
-name: Kök Neden Analizi CI
+name: Otonom İHA Mülakat CI (Docker'sız Kurulum)
 
 on: [push]
 
 jobs:
-  # TEST 1: ubuntu-20.04 sanal makinesi çalışıyor mu? (Docker OLMADAN)
-  test_runner:
+  build_and_test:
+    # Standart Ubuntu 20.04 sanal makinesi üzerinde çalışıyoruz.
     runs-on: ubuntu-20.04
+    
     steps:
-      - name: Runner'ı Test Et
-        run: echo "Ubuntu 20.04 runner başarıyla çalıştı."
+      - name: Depoyu ve Submodule'leri Çek (Checkout)
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
-  # TEST 2: ubuntu-20.04 üzerinde Docker komutu çalışıyor mu?
-  test_docker:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Docker'ı Test Et
-        run: docker run hello-world
+      - name: Gerekli Sistem Paketlerini Kur
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build exiftool python3-pip protobuf-compiler libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+
+      - name: Python Bağımlılıklarını Kur
+        run: pip3 install --user -r ${{ github.workspace }}/src/PX4-Autopilot/requirements.txt
+
+      - name: ROS 2 Kurulumu
+        run: |
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository universe
+          sudo apt-get update
+          sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y ros-humble-desktop ros-dev-tools
+
+      - name: MAVROS Kurulumu
+        run: sudo apt-get install -y ros-humble-mavros ros-humble-mavros-msgs
+
+      - name: Çalışma Alanını Kur ve Derle
+        shell: bash
+        run: |
+          # ROS 2 ortamını kaynak göster
+          source /opt/ros/humble/setup.bash
+          
+          # Proje kök dizinine git
+          cd ${{ github.workspace }}
+          
+          echo "--- ROS 2 bağımlılıkları çözülüyor ---"
+          rosdep init
+          rosdep update
+          rosdep install -i --from-path src --rosdistro humble -y --skip-keys "mavros"
+          
+          echo "--- Çalışma alanı derleniyor ---"
+          colcon build
