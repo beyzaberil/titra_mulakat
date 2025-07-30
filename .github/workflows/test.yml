@@ -1,35 +1,10 @@
-name: Otonom İHA Mülakat CI
+name: Basit Ping Testi
 
 on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-20.04
-    container: px4io/px4-dev-simulation-focal:latest
-
+  ping_test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Depoyu ve Submodule'leri Çek (Checkout)
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-
-      - name: Gerekli Bağımlılıkları Kur
-        shell: bash
-        run: |
-          apt-get update -y
-          apt-get install -y ros-humble-mavros ros-humble-mavros-msgs python3-colcon-common-extensions
-      
-      - name: ROS 2 Bağımlılıklarını Çöz
-        shell: bash
-        run: |
-          source /opt/ros/humble/setup.bash
-          # Çalışma alanının kök dizinine git
-          cd ${{ github.workspace }}
-          rosdep install -i --from-path src --rosdistro humble -y --skip-keys "mavros"
-
-      - name: Çalışma Alanını Derle (Build)
-        shell: bash
-        run: |
-          source /opt/ros/humble/setup.bash
-          cd ${{ github.workspace }}
-          colcon build
+      - name: Ekrana Mesaj Yazdır
+        run: echo "Merhaba Dünya! Actions çalışıyor."
