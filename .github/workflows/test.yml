@@ -1,19 +1,18 @@
-name: Otonom İHA Mülakat CI
+name: Kök Neden Analizi CI
 
 on: [push]
 
 jobs:
-  build:
+  # TEST 1: ubuntu-20.04 sanal makinesi çalışıyor mu? (Docker OLMADAN)
+  test_runner:
     runs-on: ubuntu-20.04
-
     steps:
-      - name: Depoyu ve Submodule'leri Çek (Checkout)
-        uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
+      - name: Runner'ı Test Et
+        run: echo "Ubuntu 20.04 runner başarıyla çalıştı."
 
-      - name: Derleme Betiğini Konteyner İçinde Çalıştır
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/root/ws \
-            px4io/px4-dev-simulation-focal:latest /bin/bash /root/ws/.github/scripts/build_in_container.sh
+  # TEST 2: ubuntu-20.04 üzerinde Docker komutu çalışıyor mu?
+  test_docker:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Docker'ı Test Et
+        run: docker run hello-world
