@@ -1,10 +1,19 @@
-name: Basit Ping Testi
+name: Otonom İHA Mülakat CI
 
 on: [push]
 
 jobs:
-  ping_test:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-20.04
+
     steps:
-      - name: Ekrana Mesaj Yazdır
-        run: echo "Merhaba Dünya! Actions çalışıyor."
+      - name: Depoyu ve Submodule'leri Çek (Checkout)
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Derleme Betiğini Konteyner İçinde Çalıştır
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/root/ws \
+            px4io/px4-dev-simulation-focal:latest /bin/bash /root/ws/.github/scripts/build_in_container.sh
