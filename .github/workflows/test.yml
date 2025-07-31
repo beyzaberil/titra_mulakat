@@ -1,27 +1,28 @@
-name: Otonom İHA Mülakat CI (Docker'sız Kurulum)
+name: Kod Kalitesi ve Derleme CI
 
 on: [push]
 
 jobs:
-  build_and_test:
-    # Standart Ubuntu 20.04 sanal makinesi üzerinde çalışıyoruz.
+  lint_and_build:
     runs-on: ubuntu-20.04
-    
+
     steps:
       - name: Depoyu ve Submodule'leri Çek (Checkout)
         uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-
-      - name: Gerekli Sistem Paketlerini Kur
+      
+      - name: Python ve linter Kurulumu
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build exiftool python3-pip protobuf-compiler libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-
-      - name: Python Bağımlılıklarını Kur
-        run: pip3 install --user -r ${{ github.workspace }}/src/PX4-Autopilot/requirements.txt
-
-      - name: ROS 2 Kurulumu
+          sudo apt-get install -y python3-pip python3-flake8
+      
+      - name: Python Kod Kalitesini Kontrol Et (Linting)
+        run: |
+          # Projedeki tüm Python dosyalarında stil kontrolü yap
+          flake8 ${{ github.workspace }}/src
+          
+      - name: ROS 2 Kurulumu (Sadece derleme için gerekli temel paketler)
         run: |
           sudo apt-get install -y software-properties-common
           sudo add-apt-repository universe
@@ -29,24 +30,18 @@ jobs:
           sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
           sudo apt-get update
-          sudo apt-get install -y ros-humble-desktop ros-dev-tools
-
-      - name: MAVROS Kurulumu
-        run: sudo apt-get install -y ros-humble-mavros ros-humble-mavros-msgs
-
-      - name: Çalışma Alanını Kur ve Derle
+          # Desktop yerine sadece temel derleme araçlarını kuruyoruz
+          sudo apt-get install -y ros-dev-tools ros-humble-common-interfaces
+          
+      - name: MAVROS Mesajlarını Kur
+        run: sudo apt-get install -y ros-humble-mavros-msgs
+        
+      - name: Çalışma Alanını Derle
         shell: bash
         run: |
-          # ROS 2 ortamını kaynak göster
           source /opt/ros/humble/setup.bash
-          
-          # Proje kök dizinine git
           cd ${{ github.workspace }}
-          
-          echo "--- ROS 2 bağımlılıkları çözülüyor ---"
           rosdep init
           rosdep update
           rosdep install -i --from-path src --rosdistro humble -y --skip-keys "mavros"
-          
-          echo "--- Çalışma alanı derleniyor ---"
           colcon build
